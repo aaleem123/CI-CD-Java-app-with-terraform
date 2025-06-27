@@ -24,35 +24,29 @@ pipeline {
 
         stage('Increment Version') {
             steps {
-                script {
-                    sh '''
-                        CURRENT_VERSION=$(grep "^version =" build.gradle | awk '{print $3}' | tr -d "'")
-                        echo "Current Version: $CURRENT_VERSION"
-                        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-                        NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                        echo "New Version: $NEW_VERSION"
-                        sed -i "s/version = .*/version = '${NEW_VERSION}'/" build.gradle
-                        git config user.email "ci@example.com"
-                        git config user.name "CI Pipeline"
-                        git add build.gradle
-                        git commit -m "Bump version to ${NEW_VERSION}"
-                        git push origin HEAD:main
-                    '''
-                }
+                sh '''
+                    mvn build-helper:parse-version versions:set \
+                    -DnewVersion=${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.nextIncrementalVersion} \
+                    versions:commit
+
+                    git config user.email "ci@example.com"
+                    git config user.name "CI Pipeline"
+                    git add pom.xml
+                    git commit -m "Bump version"
+                    git push origin HEAD:main
+                '''
             }
         }
 
         stage('Build Spring Boot Jar') {
             steps {
-                sh 'gradle bootJar --no-daemon -x test'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${ECR_REPO}:${BUILD_NUMBER} ."
-                }
+                sh "docker build -t ${ECR_REPO}:latest ."
             }
         }
 
@@ -64,21 +58,10 @@ pipeline {
                         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
                         aws configure set region ${AWS_REGION}
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
-                        docker push ${ECR_REPO}:${BUILD_NUMBER}
+                        docker push ${ECR_REPO}:latest
                     '''
                 }
             }
         }
-
-        stage('Deploy to EKS') {
-            steps {
-                sh '''
-                    aws eks update-kubeconfig --region ${AWS_REGION} --name demo-cluster
-                    kubectl set image deployment/spring-app spring-app=${ECR_REPO}:${BUILD_NUMBER} -n default
-                    kubectl rollout status deployment/spring-app -n default
-                '''
-            }
-        }
     }
 }
-
