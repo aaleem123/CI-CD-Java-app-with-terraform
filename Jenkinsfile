@@ -25,8 +25,9 @@ pipeline {
         stage('Increment Version') {
             steps {
                 sh '''
+                    #!/bin/bash
                     mvn build-helper:parse-version versions:set \
-                    -DnewVersion=${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.nextIncrementalVersion} \
+                    -DnewVersion=$(mvn help:evaluate -Dexpression=parsedVersion.majorVersion -q -DforceStdout).$(mvn help:evaluate -Dexpression=parsedVersion.minorVersion -q -DforceStdout).$(mvn help:evaluate -Dexpression=parsedVersion.nextIncrementalVersion -q -DforceStdout) \
                     versions:commit
 
                     git config user.email "ci@example.com"
