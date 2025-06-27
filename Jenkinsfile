@@ -24,13 +24,13 @@ pipeline {
 
         stage('Increment Version') {
             steps {
+                sshagent (credentials: ["${GIT_CREDENTIALS_ID}"]) {
                 sh '''#!/bin/bash
                     set -e
                     echo "Extracting current version..."
                     version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
                     echo "Current version: $version"
 
-                    # Simple logic to bump last numeric segment
                     new_version=$(echo $version | awk -F. -v OFS=. '{$NF += 1; print}')
                     echo "Bumping to version: $new_version"
 
@@ -42,6 +42,7 @@ pipeline {
                     git commit -m "Bump version to $new_version"
                     git push origin HEAD:main
                 '''
+                }
             }
         }
 
