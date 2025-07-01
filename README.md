@@ -20,11 +20,11 @@
 - MySQL 8, phpMyAdmin
 
 ## ⚡ **CI/CD Pipeline Workflow**
-- 1. Jenkins builds the Java application with Gradle  
-- 2. Docker image created and tagged as `aaleem1993/twn-project:latest`  
-- 3. Image pushed to Docker Hub  
-- 4. Terraform provisions AWS EC2 instance  
-- 5. SSH into EC2 → Pull latest Docker image → Deploy with Docker Compose  
+- Jenkins builds the Java application with Gradle  
+- Docker image created and tagged as `aaleem1993/twn-project:latest`  
+- Image pushed to Docker Hub  
+- Terraform provisions AWS EC2 instance  
+- SSH into EC2 → Pull latest Docker image → Deploy with Docker Compose  
 
 **Pics :)**
 ![Screenshot 2025-06-17 170550](https://github.com/user-attachments/assets/cfe80b8c-a4e3-4637-a60c-43c8f5a6d385)
