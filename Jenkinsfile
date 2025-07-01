@@ -2,76 +2,56 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'us-east-1'
-        ECR_REPO = '682475225405.dkr.ecr.us-east-1.amazonaws.com/java-maven-app'
-        GIT_CREDENTIALS_ID = 'git-ssh'
-        ECR_CREDENTIALS_ID = 'aws-ecr-creds'
+        DOCKER_HUB_USER = "aaleem1993"
+        IMAGE_NAME = "twn-project"
+        SSH_PRIVATE_KEY = credentials("ec2-ssh-key") 
+        DOCKER_CREDENTIALS_ID = "docker-hub-creds"    
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Build Java App') {
             steps {
-                checkout([$class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[
-                        url: 'git@github.com:aaleem123/CI-CD-Pipeline-with-EKS-and-AWS-ECR.git',
-                        credentialsId: "${GIT_CREDENTIALS_ID}"
-                    ]]
-                ])
-            }
-        }
-
-        stage('Increment Version') {
-            steps {
-                sshagent (credentials: ["${GIT_CREDENTIALS_ID}"]) {
-                sh '''#!/bin/bash
-                    set -e
-                    echo "Extracting current version..."
-                    version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-                    echo "Current version: $version"
-
-                    new_version=$(echo $version | awk -F. -v OFS=. '{$NF += 1; print}')
-                    echo "Bumping to version: $new_version"
-
-                    mvn versions:set -DnewVersion=$new_version versions:commit
-
-                    git config user.email "ci@example.com"
-                    git config user.name "CI Pipeline"
-                    git add pom.xml
-                    git commit -m "Bump version to $new_version"
-                    git push origin HEAD:main
-                '''
-                }
-            }
-        }
-
-        stage('Build Spring Boot Jar') {
-            steps {
-                sh 'mvn clean package -DskipTests'
+                sh "./gradlew build"
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${ECR_REPO}:latest ."
+                sh "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest ."
             }
         }
 
-        stage('Push to ECR') {
+        stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${ECR_CREDENTIALS_ID}", usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''#!/bin/bash
-                        set -e
-                        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-                        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-                        aws configure set region ${AWS_REGION}
+                withDockerRegistry([credentialsId: DOCKER_CREDENTIALS_ID, url: "https://index.docker.io/v1/"]) {
+                    sh "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
+                }
+            }
+        }
 
-                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
-                        docker push ${ECR_REPO}:latest
+        stage('Provision EC2 with Terraform') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Deploy to EC2 with Docker Compose') {
+            steps {
+                sshagent (credentials: ["ec2-ssh-key"]) {
+                    sh '''
+                    public_ip=$(terraform -chdir=terraform output -raw public_ip)
+                    ssh -o StrictHostKeyChecking=no ec2-user@$public_ip << EOF
+                    docker pull ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest
+                    docker-compose down || true
+                    docker-compose up -d
+                    EOF
                     '''
                 }
             }
         }
     }
 }
+
