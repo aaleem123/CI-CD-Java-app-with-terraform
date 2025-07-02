@@ -7,7 +7,8 @@
 - ✅ Image pushed to Docker Hub  
 - ✅ Infrastructure provisioned with Terraform on AWS EC2  
 - ✅ Automated CI/CD pipeline with Jenkins  
-- ✅ Multi-container orchestration with Docker Compose (MySQL, Spring App, phpMyAdmin)  
+- ✅ Multi-container orchestration with Docker Compose (MySQL, Spring App, phpMyAdmin)
+- ✅ Terraform was installed inside Jenkins docker container 
 
 **📦Tech Stack**
 - Java 17, Spring Boot
