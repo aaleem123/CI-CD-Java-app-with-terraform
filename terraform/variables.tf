@@ -1,9 +1,7 @@
 variable "key_name" {
-  description = "SSH key name configured in AWS"
-  default     = "localkey" 
+  description = "AWS Key Pair name used to provision EC2"
 }
 
 variable "private_key_path" {
-  description = "Path to private SSH key"
-  default     = "/root/.ssh/localkey.pem"
+  description = "Path to the private SSH key for EC2 access"
 }
