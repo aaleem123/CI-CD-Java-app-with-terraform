@@ -9,8 +9,8 @@ resource "aws_instance" "app_server" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo yum update -y || sudo apt update -y",
-      "sudo yum install docker -y || sudo apt install docker.io -y",
+      "sudo apt update -y",
+      "sudo apt install docker.io -y",
       "sudo systemctl start docker",
       "sudo usermod -aG docker ec2-user || sudo usermod -aG docker ubuntu",
       "sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose",
