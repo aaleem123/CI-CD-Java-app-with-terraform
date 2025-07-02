@@ -5,5 +5,5 @@ variable "key_name" {
 
 variable "private_key_path" {
   description = "Path to private SSH key"
-  default     = "C:\\Users\\HP\\Downloads\\localkey.pem"
+  default     = "/root/.ssh/localkey.pem"
 }
